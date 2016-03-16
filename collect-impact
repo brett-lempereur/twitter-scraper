@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+##
+# Periodically sample the popularity of tweets in the dataset.
+
+require 'json'
+
+require './lib/scraper.rb'
+
+# Sampling parameters.
+SAMPLE_SIZE = 100
+SAMPLE_DELAY = 600
+
+# Gracefully exit when we're interrupted.
+trap "SIGINT" do
+  puts "Exiting..."
+  exit 130
+end
+
+# Connect to the datastore and create a restful client.
+db = Scraper.datastore
+client = Scraper.rest
+
+# Sampling loop.
+loop do
+  identifiers = db.srandmember(Scraper::TWEET_SET, SAMPLE_SIZE)
+  if not identifiers.empty? then
+    sample_time = DateTime.now.rfc3339
+    statuses = client.statuses(identifiers, {:trim_user => true})
+    statuses.each do |status|
+      puts "STAT: <#{status.id}> #{status.retweet_count} #{status.favorite_count}"
+      document = JSON.generate({
+        :status_id => status.id,
+        :sample_time => sample_time,
+        :retweet_count => status.retweet_count,
+        :favourite_count => status.favorite_count
+      })
+      key = Scraper::IMPACT_KEY % {:id => status.id, :time => sample_time}
+      db.set key, document
+    end
+  end
+  sleep SAMPLE_DELAY
+end

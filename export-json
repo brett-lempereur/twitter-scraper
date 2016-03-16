@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+##
+# Export information from the datastore to JSON arrays.
+
+require './lib/scraper.rb'
+
+##
+# Dump a table as JSON records to a file.
+def dump(db, filename, source)
+  open(filename, "w") do |file|
+    file.write("[")
+    source.call(db) do |record|
+      file.write(record)
+    end
+    file.write("]")
+  end
+end
+
+# Verify that we have been given the correct command-line arguments.
+if ARGV.length != 3
+  puts "Usage:\n    export-json TWEETS USERS IMPACT"
+  exit 1
+end
+
+# Open the connection to the datastore.
+db = Scraper.datastore
+
+# Dump the records directly to the file without interpreting them as JSON
+# documents.
+puts "Writing tweets..."
+dump(db, ARGV[0], Scraper.method(:tweets))
+puts "Writing users..."
+dump(db, ARGV[1], Scraper.method(:users))
+puts "Writing impact..."
+dump(db, ARGV[2], Scraper.method(:impact))
+puts "Done."

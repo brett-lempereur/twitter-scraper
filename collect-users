@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+##
+# Periodically fetch the profiles of users that we do not already hold a
+# profile for.
+
+require 'json'
+
+require './lib/scraper.rb'
+
+# Data store keys, batch limit, and sample delay.
+PROFILED_SET = "users:profiled"
+UNPROFILED_SET = "users:unprofiled"
+LIMIT = 100
+DELAY = 15
+
+# Gracefully exit when we're interrupted.
+trap "SIGINT" do
+  puts "Exiting..."
+  exit 130
+end
+
+# Connect to the datastore and create a restful client.
+db = Scraper.datastore
+client = Scraper.rest
+
+# Sampling loop.
+loop do
+  db.sdiffstore(UNPROFILED_SET, Scraper::USER_SET, PROFILED_SET)
+  user_ids = db.srandmember UNPROFILED_SET, LIMIT
+  if not user_ids.empty? then
+    profiles = client.users(*(user_ids.map { |p| p.to_i }))
+    profiles.each do |profile|
+      puts "USER: <%s> %s: %s" % [profile.id, profile.screen_name, profile.name]
+      document = JSON.generate({
+        :user_id => profile.id.to_s,
+        :screen_name => profile.screen_name.to_s,
+        :name => profile.name.to_s,
+        :lang => profile.lang.to_s,
+        :location => profile.location.to_s,
+        :description => profile.description.to_s,
+        :friends_count => profile.friends_count.to_s,
+        :followers_count => profile.followers_count.to_s,
+        :favourites_count => profile.favorites_count.to_s,
+        :statuses_count => profile.statuses_count.to_s,
+        :background_colour => profile.profile_background_color.to_s,
+        :link_colour => profile.profile_link_color.to_s,
+        :border_colour => profile.profile_sidebar_border_color.to_s,
+        :sidebar_fill_colour => profile.profile_sidebar_fill_color.to_s,
+        :text_colour => profile.profile_text_color.to_s
+      })
+      db.set Scraper::USER_KEY % {:id => profile.id}, document
+      db.sadd PROFILED_SET, profile.id
+    end
+  end
+  sleep DELAY
+end

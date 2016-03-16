@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+##
+# This program clears all information from the data store.
+
+require "highline/import"
+
+require "./lib/scraper.rb"
+
+# Make sure that the user is certain.
+sure = ask("Erase all data [Y/N]? ") { |q| q.limit = 1; q.case = :downcase }
+if sure != "y"
+  exit 1
+end
+
+# Connect to the data store and delete all data.
+db = Scraper.datastore
+db.flushdb
+
+# Let the user know.
+puts "Erased all data."

@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+##
+# Export information from the datastore to CSV files.
+
+require 'csv'
+require 'json'
+
+require './lib/scraper.rb'
+
+##
+# Dump a table to a CSV file with headers.
+def dump(db, filename, source)
+  first = true
+  CSV.open(filename, "wb", :force_quotes => true) do |csv|
+    source.call(db) do |record|
+      data = JSON.parse(record)
+      if first then
+        csv << data.keys
+        first = false
+      end
+      csv << data.values
+    end
+  end
+end
+
+# Verify that we have been given the correct command-line arguments.
+if ARGV.length != 3
+  puts "Usage:\n    export-csv TWEETS USERS IMPACT"
+  exit 1
+end
+
+# Open the connection to the datastore.
+db = Scraper.datastore
+
+# Dump the records to the files, sorting the hash in the process to ensure
+# proper ordering.  This is expensive, but I'm lazy.
+puts "Writing tweets..."
+dump(db, ARGV[0], Scraper.method(:tweets))
+puts "Writing users..."
+dump(db, ARGV[1], Scraper.method(:users))
+puts "Writing impact..."
+dump(db, ARGV[2], Scraper.method(:impact))
+puts "Done."
