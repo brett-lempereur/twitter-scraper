@@ -7,7 +7,7 @@ tweets, user profiles, and measures of impact over time in a Redis store.
 
 Install the dependencies first:
 
-    gem install twitter redis
+    gem install twitter redis highline
 
 And then clone this repository:
 
