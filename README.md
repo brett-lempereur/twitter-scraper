@@ -37,6 +37,6 @@ follow:
 If you need to export data to CSV/JSON, or to clear the datastore, use
 the following commands:
 
-    ./export-csv filename.csv
-    ./export-json filename.json
+    ./export-csv tweets.csv users.csv impact.csv
+    ./export-json tweets.json users.json impact.json
     ./clear-datastore
